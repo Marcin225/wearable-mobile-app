@@ -16,9 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-
+/**
 Header showing BLE connection status, connection action and battery level
-
+*/
 @Composable
 fun StatusHeader(
     isConnected: Boolean,
@@ -33,8 +33,6 @@ fun StatusHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-
-            // BLE connection status indicator
             Box (
                 modifier = Modifier
                     .size(10.dp)
@@ -50,7 +48,6 @@ fun StatusHeader(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Connection button label
             OutlinedButton(
                 onClick = onDisconnectClick,
                 shape = RoundedCornerShape(8.dp),
@@ -64,8 +61,6 @@ fun StatusHeader(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-
-                // Battery label
                 imageVector = Icons.Default.BatteryFull,
                 contentDescription = "Battery",
                 tint = Color.Green,

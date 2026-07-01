@@ -1,47 +1,92 @@
 package com.example.werableapp
 
+import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.werableapp.ble.BleManager
+import com.example.werableapp.ui.screens.DashboardScreen
 import com.example.werableapp.ui.theme.WerableAppTheme
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            WerableAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+
+    private val bluetoothManager by lazy {
+        getSystemService(BluetoothManager::class.java)
+    }
+
+    private val bluetoothAdapter: BluetoothAdapter? by lazy {
+        bluetoothManager?.adapter
+    }
+
+    private val bleManager by lazy {
+        BleManager(this)
+    }
+
+    private val enableBtLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Bluetooth may be enabled here but, now scan starts only from the Connect button
+
+//        if (bluetoothAdapter?.isEnabled == true) {
+//            bleManager.startScan()
+//        }
+    }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Check runtime BLE permissions and enable if needed
+        val hasPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions[Manifest.permission.BLUETOOTH_SCAN] == true &&
+                    permissions[Manifest.permission.BLUETOOTH_CONNECT] == true &&
+                    permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        } else {
+            permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        }
+
+        if (hasPermissions) {
+            // Ask the user to enable Bluetooth (scanning takes place after pressing the connection button)
+            if (bluetoothAdapter?.isEnabled == false) {
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                enableBtLauncher.launch(enableBtIntent)
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WerableAppTheme {
-        Greeting("Android")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            )
+        } else {
+            requestPermissionLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            )
+        }
+
+        enableEdgeToEdge()
+
+        setContent {
+            WerableAppTheme {
+                DashboardScreen(bleManager = bleManager)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bleManager.disconnect()
     }
 }
