@@ -17,9 +17,13 @@ import android.os.Looper
 import android.os.ParcelUuid
 import android.util.Log
 import com.example.werableapp.data.WearableData
+import com.example.werableapp.data.AppDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 // Custom service and characteristic UUID
@@ -30,7 +34,7 @@ private val CHARACTERISTIC_UUID = UUID.fromString("3ba2a546-ab9f-4ff4-b7ba-4056b
 private val CLIENT_CHARACTERISTIC_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
 /**
- * Handles BLE scanning, connection and incoming wearable notifications
+ * Handles BLE connection, incoming wearable data and local data storage
  */
 class BleManager(private val context: Context) {
 
@@ -48,8 +52,14 @@ class BleManager(private val context: Context) {
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     // Latest data received from the wearable
-    private val _data = MutableStateFlow(WearableData(0, 0, 0))
+    private val _data = MutableStateFlow(WearableData(heartRate = 0, spo2 = 0, batteryLevel = 0))
     val data: StateFlow<WearableData> = _data.asStateFlow()
+
+    // database access for wearable measurements
+    private val wearableDao by lazy { AppDatabase.getDatabase(context).wearableDao() }
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val dataBuffer = mutableListOf<WearableData>()
+    private val BUFFER_LIMIT = 23
 
     private val scanCallback = object : ScanCallback() {
 
@@ -82,6 +92,8 @@ class BleManager(private val context: Context) {
 
                     bluetoothGatt = gatt
                     _isConnected.value = true
+
+                    cleanupOldData() // remove old data (older than 30 days) when a new connection is established
 
                     gatt.discoverServices()
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -228,12 +240,66 @@ class BleManager(private val context: Context) {
         val spo2 = value[1].toInt() and 0xFF
         val batteryLevel = value[2].toInt() and 0xFF
 
-        _data.value = WearableData(
+        val newData = WearableData(
             heartRate = hr,
             spo2 = spo2,
             batteryLevel = batteryLevel
         )
 
+
+        _data.value = newData
+        // buffer measurements and save them to the database in batches
+        dataBuffer.add(newData)
+
+        if (dataBuffer.size >= BUFFER_LIMIT) {
+            val batchToSave = dataBuffer.toList()
+            dataBuffer.clear()
+
+            coroutineScope.launch {
+                wearableDao.insertBatch(batchToSave)
+                Log.d("DB", "Saved ${batchToSave.size} measurements to the database")
+            }
+        }
+
         Log.d("BLE", "Received data: HR=$hr, SpO2=$spo2, Battery=$batteryLevel")
+    }
+
+    // removes data measurements older than 30 days
+    private fun cleanupOldData() {
+        coroutineScope.launch {
+            val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
+            val cutoffTime = System.currentTimeMillis() - thirtyDaysInMillis
+
+            wearableDao.deleteOlderThan(cutoffTime)
+            Log.d("DB", "Checked and cleaned up old data from the database older than 30 days")
+        }
+    }
+
+    // fills the database with test data for debugging
+
+    fun fillWithMockData() {
+        coroutineScope.launch {
+            val mockList = mutableListOf<WearableData>()
+            val currentTime = System.currentTimeMillis()
+
+            for (i in 1440 downTo 0) {
+                val pastTime = currentTime - (i * 60 * 1000L)
+                val fakeHr = (60..105).random()
+                val fakeSpo2 = (94..100).random()
+                val fakeBattery = 100 - (i / 15)
+
+                mockList.add(
+                    WearableData(
+                        heartRate = fakeHr,
+                        spo2 = fakeSpo2,
+                        batteryLevel = if (fakeBattery > 0) fakeBattery else 1,
+                        timeStamp = pastTime
+                    )
+                )
+            }
+
+            wearableDao.insertBatch(mockList)
+            Log.d("DB", "Generated ${mockList.size} mock measurements.")
+        }
     }
 }
