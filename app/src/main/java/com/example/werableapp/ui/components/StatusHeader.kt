@@ -42,7 +42,7 @@ fun StatusHeader(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = if (isConnected) "Connected" else "Disconnected",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp
             )
 
@@ -51,7 +51,7 @@ fun StatusHeader(
             OutlinedButton(
                 onClick = onDisconnectClick,
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
             ) {
                 Text(
                     text = if (isConnected) "Disconnect" else "Connect",
@@ -69,7 +69,7 @@ fun StatusHeader(
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = "$batteryLevel%",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp
             )
         }

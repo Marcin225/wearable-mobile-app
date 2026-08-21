@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -27,7 +28,7 @@ fun DashboardScreen(bleManager: BleManager) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0E14))
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         StatusHeader(

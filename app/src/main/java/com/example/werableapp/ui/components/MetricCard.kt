@@ -28,7 +28,7 @@ fun MetricCard(
         modifier = modifier
             .height(140.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A23))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = modifier
@@ -48,7 +48,7 @@ fun MetricCard(
                 ) {
                     Text(
                         text = title,
-                        color = Color.LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                     Spacer(
@@ -56,7 +56,7 @@ fun MetricCard(
                     )
                     Text(
                         text = value,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 42.sp,
                         fontWeight = FontWeight.Bold
                     )

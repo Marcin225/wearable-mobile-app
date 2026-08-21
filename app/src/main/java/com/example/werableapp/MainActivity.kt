@@ -10,6 +10,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import com.example.werableapp.ui.screens.MainScreen
 import com.example.werableapp.ble.BleManager
 import com.example.werableapp.ui.screens.DashboardScreen
 import com.example.werableapp.ui.theme.WerableAppTheme
@@ -78,9 +87,20 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
+        // Set up the app UI and theme
         setContent {
-            WerableAppTheme {
-                DashboardScreen(bleManager = bleManager)
+            var isDarkTheme by remember { mutableStateOf(true) }
+            WerableAppTheme(darkTheme = isDarkTheme) {
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    MainScreen(
+                        bleManager = bleManager,
+                        isDarkTheme = isDarkTheme,
+                        onThemeChange = { isDarkTheme = it }
+                    )
+                }
             }
         }
     }
