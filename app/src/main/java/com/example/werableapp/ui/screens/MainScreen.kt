@@ -10,18 +10,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.werableapp.ble.BleManager
-import com.example.werableapp.ui.screens.DashboardScreen
-import com.example.werableapp.ui.screens.SettingsScreen
 
 /**
- * Main screen with a bottom navigation bar for switching between app sections
+ * Root screen component containing the bottom navigation bar and the navigation host
+ * Manages routing between the Dashboard and Settings screens
  */
-
 @Composable
 fun MainScreen(
     bleManager: BleManager,
@@ -29,13 +29,16 @@ fun MainScreen(
     onThemeChange: (Boolean) -> Unit
 ) {
     val navController = rememberNavController()
-    // get current screen to highlight correct navigation item
+    // observe the current navigation state to correctly highlight the active tab
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                modifier = Modifier.height(70.dp),
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
                     label = { Text("Dashboard") },
@@ -43,8 +46,11 @@ fun MainScreen(
                     onClick = {
                         if (currentRoute != "dashboard") {
                             navController.navigate("dashboard") {
+                                // avoid building a large navigation stack and opening the same screen twice
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                // prevent multiple copies of the same screen on the backstack
                                 launchSingleTop = true
+                                // keep the screen state intact when switching back and forth
                                 restoreState = true
                             }
                         }
@@ -57,7 +63,6 @@ fun MainScreen(
                     onClick = {
                         if (currentRoute != "settings") {
                             navController.navigate("settings") {
-                                // avoid building a large navigation stack and opening the same screen twice
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
@@ -78,10 +83,11 @@ fun MainScreen(
             exitTransition = { ExitTransition.None }
         ) {
             composable("dashboard") {
-                DashboardScreen(bleManager = bleManager)
+                DashboardScreen(bleManager = bleManager, isDarkTheme = isDarkTheme)
             }
             composable("settings") {
                 SettingsScreen(
+                    bleManager = bleManager,
                     isDarkTheme = isDarkTheme,
                     onThemeChange = onThemeChange
                 )

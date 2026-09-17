@@ -47,9 +47,17 @@ class BleManager(private val context: Context) {
     private var scanning = false
     private var bluetoothGatt: BluetoothGatt? = null
 
-    // Connection state exposed to the UI
+    // connection state exposed to the UI
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
+    // error state
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
 
     // Latest data received from the wearable
     private val _data = MutableStateFlow(WearableData(heartRate = 0, spo2 = 0, batteryLevel = 0))
@@ -75,6 +83,7 @@ class BleManager(private val context: Context) {
         override fun onScanFailed(errorCode: Int) {
             Log.e("BLE", "Scan failed: $errorCode")
             scanning = false
+            _errorMessage.value = "BLE scan failed (error: $errorCode)"
         }
     }
 
@@ -109,6 +118,8 @@ class BleManager(private val context: Context) {
                 _isConnected.value = false
                 gatt.close()
                 bluetoothGatt = null
+
+                _errorMessage.value = "Failed to connect (status: $status)."
             }
         }
 
@@ -187,8 +198,9 @@ class BleManager(private val context: Context) {
             handler.postDelayed({
                 if (scanning) {
                     stopScan()
+                    _errorMessage.value = "Device not found. Please try again."
                 }
-            }, 15_000)
+            }, 10_000)
 
         } catch (e: SecurityException) {
             Log.e("BLE", "No permission to scan for BLE devices", e)
@@ -249,15 +261,17 @@ class BleManager(private val context: Context) {
 
         _data.value = newData
         // buffer measurements and save them to the database in batches
-        dataBuffer.add(newData)
+        if (hr > 0 || spo2 > 0) {
+            dataBuffer.add(newData)
 
-        if (dataBuffer.size >= BUFFER_LIMIT) {
-            val batchToSave = dataBuffer.toList()
-            dataBuffer.clear()
+            if (dataBuffer.size >= BUFFER_LIMIT) {
+                val batchToSave = dataBuffer.toList()
+                dataBuffer.clear()
 
-            coroutineScope.launch {
-                wearableDao.insertBatch(batchToSave)
-                Log.d("DB", "Saved ${batchToSave.size} measurements to the database")
+                coroutineScope.launch {
+                    wearableDao.insertBatch(batchToSave)
+                    Log.d("DB", "Saved ${batchToSave.size} measurements to the database")
+                }
             }
         }
 
@@ -281,12 +295,13 @@ class BleManager(private val context: Context) {
         coroutineScope.launch {
             val mockList = mutableListOf<WearableData>()
             val currentTime = System.currentTimeMillis()
+            val totalMinutes = 30 * 24 * 60
 
-            for (i in 1440 downTo 0) {
+            for (i in totalMinutes downTo 0) {
                 val pastTime = currentTime - (i * 60 * 1000L)
                 val fakeHr = (60..105).random()
                 val fakeSpo2 = (94..100).random()
-                val fakeBattery = 100 - (i / 15)
+                val fakeBattery = 100 - ((i / 15) % 100)
 
                 mockList.add(
                     WearableData(
@@ -300,6 +315,13 @@ class BleManager(private val context: Context) {
 
             wearableDao.insertBatch(mockList)
             Log.d("DB", "Generated ${mockList.size} mock measurements.")
+        }
+    }
+
+    fun clearDatabase() {
+        coroutineScope.launch {
+            wearableDao.clearAllData()
+            Log.d("DB", "Wszystkie dane testowe zostały usunięte z bazy.")
         }
     }
 }

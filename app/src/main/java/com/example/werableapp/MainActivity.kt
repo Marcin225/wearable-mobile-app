@@ -23,6 +23,11 @@ import com.example.werableapp.ble.BleManager
 import com.example.werableapp.ui.screens.DashboardScreen
 import com.example.werableapp.ui.theme.WerableAppTheme
 
+
+/**
+ * Main entry point of the app.
+ * Handles Bluetooth permissions, lifecycle events, and sets up the Jetpack Compose UI
+ */
 class MainActivity : ComponentActivity() {
 
     private val bluetoothManager by lazy {

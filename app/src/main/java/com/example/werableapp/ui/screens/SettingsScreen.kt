@@ -9,12 +9,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.example.werableapp.ble.BleManager
+
 /**
  * Application settings and customization screen
  */
 
 @Composable
 fun SettingsScreen(
+    bleManager: BleManager,
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit
 ) {
@@ -44,6 +47,43 @@ fun SettingsScreen(
                 checked = isDarkTheme,
                 onCheckedChange = { onThemeChange(it) }
             )
+        }
+
+        // Debug options for development and testing
+        // Allows generating 30 days of mock sensor data and wiping the local database
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Developer Options",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { bleManager.fillWithMockData() },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Text("Generate test data (24h)")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { bleManager.clearDatabase() },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Text("Clear Database", color = MaterialTheme.colorScheme.onError)
         }
     }
 }
